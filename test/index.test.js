@@ -65,6 +65,22 @@ describe('Keen IO', function() {
           readKey: ''
         });
       });
+
+      it('should always refresh global properties with user traits if present', function() {
+        var id = 'Devon Higgins';
+        var traits = { trait: 'Pretty Neat', id: id };
+        analytics.user().userId = id;
+        analytics.user().traits(traits);
+
+        // Notice no identify() call is made here.
+        // This is to emulate a page reload which loses the global
+        // properties that identify() saves.
+
+        analytics.initialize();
+        analytics.page();
+        var global_user = keen.client.client.globalProperties().user;
+        analytics.deepEqual(global_user, { userId: id, traits: traits });
+      });
     });
   });
 
