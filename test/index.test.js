@@ -53,7 +53,7 @@ describe('Keen IO', function() {
         analytics.assert(!window.KeenSegment);
         analytics.initialize();
         analytics.page();
-        analytics.ready(function(){
+        analytics.ready(function() {
           analytics.assert(window.KeenSegment);
         });
       });
