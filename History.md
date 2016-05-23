@@ -1,3 +1,9 @@
+1.0.5 / 2016-05-23
+==================
+
+  * Update keen-js to v3.1.0 (latest possible without breaking changes)
+  * Create a new `KeenSegment` namespace for analytics.js-installed SDK and return existing `Keen` object if overwritten
+
 1.0.4 / 2016-05-07
 ==================
 

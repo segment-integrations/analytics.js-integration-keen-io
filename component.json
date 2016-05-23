@@ -2,7 +2,7 @@
   "name": "analytics.js-integration-keen-io",
   "repo": "segment-integrations/analytics.js-integration-keen-io",
   "description": "The Keen Io analytics.js integration.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "main": "lib/index.js",
   "dependencies": {

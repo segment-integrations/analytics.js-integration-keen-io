@@ -1,9 +1,10 @@
+'use strict';
 
 var Analytics = require('analytics.js-core').constructor;
 var integration = require('analytics.js-integration');
 var sandbox = require('clear-env');
 var tester = require('analytics.js-integration-tester');
-var Keen = require('../lib/');
+var KeenLib = require('../lib/');
 
 describe('Keen IO', function() {
   var analytics;
@@ -12,12 +13,11 @@ describe('Keen IO', function() {
     projectId: '53e40374e861700e79000002',
     writeKey: 'f474c11bcf5813fabc933d0a1f80ff2e1ac9ff1c9338dcf2707bbb8cf68971ae524b4cac8db5da549aa3383d499ed4a809e2b6294d1d093818d699495a4171dab3e6ad86e2c31d06627f27aadb8433f43c8f27f3e0354e6ea4c12f9da57ca9d8420b18c5e4f719286a0fae08914d9c44'
   };
-  var readKey = 'e5cdee9b7395b315bd8cc635f3b04fc07561d4e42889fe1b6ac719a9a4b45732c746666d83ce8644c8b0f06b867166654f900b67b250adbc225befac4b3a2562729c2ebebfbf19b1d13f631c2ed0c9f8de0be7897eded88102abe4366c7906011dd480631ed9ba60cdef84f908abc852';
 
   beforeEach(function() {
     analytics = new Analytics();
-    keen = new Keen(options);
-    analytics.use(Keen);
+    keen = new KeenLib(options);
+    analytics.use(KeenLib);
     analytics.use(tester);
     analytics.add(keen);
   });
@@ -30,11 +30,11 @@ describe('Keen IO', function() {
   });
 
   it('should have the right settings', function() {
-    analytics.compare(Keen, integration('Keen IO')
-      .global('Keen')
+    analytics.compare(KeenLib, integration('Keen IO')
+      .global('KeenSegment')
       .option('ipAddon', false)
       .option('projectId', '')
-      .option('readKey', '')
+      .option('readKey', false)
       .option('referrerAddon', false)
       .option('trackAllPages', false)
       .option('trackNamedPages', true)
@@ -49,42 +49,22 @@ describe('Keen IO', function() {
     });
 
     describe('#initialize', function() {
-      it('should create window.Keen', function() {
-        analytics.assert(!window.Keen);
+      it('should create window.KeenSegment', function() {
+        analytics.assert(!window.KeenSegment);
         analytics.initialize();
         analytics.page();
-        analytics.assert(window.Keen);
-      });
-
-      it('should configure Keen', function() {
-        analytics.initialize();
-        analytics.page();
-        analytics.deepEqual(keen.client._config, {
-          projectId: options.projectId,
-          writeKey: options.writeKey,
-          readKey: ''
+        analytics.ready(function() {
+          analytics.assert(window.KeenSegment);
         });
       });
-    });
-  });
 
-  describe('loading', function() {
-    beforeEach(function() {
-      analytics.spy(keen, 'load');
-    });
-
-    it('should load slim version by default', function(done) {
-      analytics.load(keen, function() {
-        analytics.assert(!window.Keen.Visualization);
-        done();
-      });
-    });
-
-    it('should load full version if you have a `readKey`', function(done) {
-      keen.options.readKey = readKey;
-      analytics.load(keen, function() {
-        analytics.assert(window.Keen.Visualization);
-        done();
+      it('should configure KeenSegment', function() {
+        analytics.initialize();
+        analytics.page();
+        analytics.ready(function() {
+          analytics.equal(keen.client.projectId(), options.projectId);
+          analytics.equal(keen.client.writeKey(), options.writeKey);
+        });
       });
     });
   });
@@ -98,33 +78,33 @@ describe('Keen IO', function() {
 
     describe('#page', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should not track anonymous pages by default', function() {
         analytics.page();
-        analytics.didNotCall(keen.client.addEvent);
+        analytics.didNotCall(keen.client.recordEvent);
       });
 
       it('should track anonymous pages when the option is on', function() {
         keen.options.trackAllPages = true;
         analytics.page();
-        analytics.called(keen.client.addEvent, 'Loaded a Page');
+        analytics.called(keen.client.recordEvent, 'Loaded a Page');
       });
 
       it('should track named pages by default', function() {
         analytics.page('Name');
-        analytics.called(keen.client.addEvent, 'Viewed Name Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Name Page');
       });
 
       it('should track named pages with categories', function() {
         analytics.page('Category', 'Name');
-        analytics.called(keen.client.addEvent, 'Viewed Category Name Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Category Name Page');
       });
 
       it('should track categorized pages by default', function() {
         analytics.page('Category', 'Name');
-        analytics.called(keen.client.addEvent, 'Viewed Category Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Category Page');
       });
 
       it('should not track a named or categorized page when the option is off', function() {
@@ -132,13 +112,13 @@ describe('Keen IO', function() {
         keen.options.trackCategorizedPages = false;
         analytics.page('Name');
         analytics.page('Category', 'Name');
-        analytics.didNotCall(keen.client.addEvent);
+        analytics.didNotCall(keen.client.recordEvent);
       });
 
-      it('should pass properties to .addEvent', function() {
+      it('should pass properties to .recordEvent', function() {
         var time = new Date();
         analytics.page('category', 'name', { prop: true }, { timestamp: time });
-        analytics.called(keen.client.addEvent, 'Viewed category name Page', {
+        analytics.called(keen.client.recordEvent, 'Viewed category name Page', {
           prop: true,
           path: location.pathname,
           referrer: '',
@@ -157,24 +137,24 @@ describe('Keen IO', function() {
 
     describe('#identify', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should pass an id', function() {
         analytics.identify('id');
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { userId: 'id', traits: { id: 'id' } });
       });
 
       it('should pass a traits', function() {
         analytics.identify({ trait: true });
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { traits: { trait: true } });
       });
 
       it('should pass an id and traits', function() {
         analytics.identify('id', { trait: true });
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { userId: 'id', traits: { trait: true, id: 'id' } });
       });
 
@@ -182,7 +162,7 @@ describe('Keen IO', function() {
         it('should add ipAddon if enabled', function() {
           keen.options.ipAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ip_to_geo',
@@ -195,7 +175,7 @@ describe('Keen IO', function() {
         it('should add uaAddon if enabled', function() {
           keen.options.uaAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ua_parser',
@@ -208,7 +188,7 @@ describe('Keen IO', function() {
         it('should add urlAddon if enabled', function() {
           keen.options.urlAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:url_parser',
@@ -221,7 +201,7 @@ describe('Keen IO', function() {
         it('should add referrerAddon if enabled', function() {
           keen.options.referrerAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:referrer_parser',
@@ -239,18 +219,18 @@ describe('Keen IO', function() {
 
     describe('#track', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should pass an event', function() {
         analytics.track('event');
-        analytics.called(keen.client.addEvent, 'event');
+        analytics.called(keen.client.recordEvent, 'event');
       });
 
       it('should pass an event and properties', function() {
         var time = new Date();
         analytics.track('event', { property: true }, { timestamp: time });
-        analytics.called(keen.client.addEvent, 'event', {
+        analytics.called(keen.client.recordEvent, 'event', {
           property: true,
           keen: {
             timestamp: time,
@@ -263,7 +243,7 @@ describe('Keen IO', function() {
         it('should add ipAddon if enabled', function() {
           keen.options.ipAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ip_to_geo',
@@ -276,7 +256,7 @@ describe('Keen IO', function() {
         it('should add uaAddon if enabled', function() {
           keen.options.uaAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ua_parser',
@@ -289,7 +269,7 @@ describe('Keen IO', function() {
         it('should add urlAddon if enabled', function() {
           keen.options.urlAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:url_parser',
@@ -302,7 +282,7 @@ describe('Keen IO', function() {
         it('should add referrerAddon if enabled', function() {
           keen.options.referrerAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:referrer_parser',
