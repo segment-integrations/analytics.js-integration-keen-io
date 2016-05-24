@@ -4,7 +4,7 @@ var Analytics = require('@segment/analytics.js-core').constructor;
 var integration = require('@segment/analytics.js-integration');
 var sandbox = require('@segment/clear-env');
 var tester = require('@segment/analytics.js-integration-tester');
-var Keen = require('../lib/');
+var KeenLib = require('../lib/');
 
 describe('Keen IO', function() {
   var analytics;
@@ -16,9 +16,11 @@ describe('Keen IO', function() {
   var readKey = 'e5cdee9b7395b315bd8cc635f3b04fc07561d4e42889fe1b6ac719a9a4b45732c746666d83ce8644c8b0f06b867166654f900b67b250adbc225befac4b3a2562729c2ebebfbf19b1d13f631c2ed0c9f8de0be7897eded88102abe4366c7906011dd480631ed9ba60cdef84f908abc852';
 
   beforeEach(function() {
+    // Test with previous version installed
+    window.Keen = { version: '3.4.1' };
     analytics = new Analytics();
-    keen = new Keen(options);
-    analytics.use(Keen);
+    keen = new KeenLib(options);
+    analytics.use(KeenLib);
     analytics.use(tester);
     analytics.add(keen);
   });
@@ -31,8 +33,8 @@ describe('Keen IO', function() {
   });
 
   it('should have the right settings', function() {
-    analytics.compare(Keen, integration('Keen IO')
-      .global('Keen')
+    analytics.compare(KeenLib, integration('Keen IO')
+      .global('KeenSegment')
       .option('ipAddon', false)
       .option('projectId', '')
       .option('readKey', '')
@@ -50,14 +52,14 @@ describe('Keen IO', function() {
     });
 
     describe('#initialize', function() {
-      it('should create window.Keen', function() {
-        analytics.assert(!window.Keen);
+      it('should create window.KeenSegment', function() {
+        analytics.assert(!window.KeenSegment);
         analytics.initialize();
         analytics.page();
-        analytics.assert(window.Keen);
+        analytics.assert(window.KeenSegment);
       });
 
-      it('should configure Keen', function() {
+      it('should configure KeenSegment', function() {
         analytics.initialize();
         analytics.page();
         analytics.deepEqual(keen.client._config, {
@@ -76,7 +78,7 @@ describe('Keen IO', function() {
 
     it('should load slim version by default', function(done) {
       analytics.load(keen, function() {
-        analytics.assert(!window.Keen.Visualization);
+        analytics.assert(!window.KeenSegment.Visualization);
         done();
       });
     });
@@ -84,7 +86,15 @@ describe('Keen IO', function() {
     it('should load full version if you have a `readKey`', function(done) {
       keen.options.readKey = readKey;
       analytics.load(keen, function() {
-        analytics.assert(window.Keen.Visualization);
+        analytics.assert(window.KeenSegment.Visualization);
+        done();
+      });
+    });
+
+    it('should preserve existing window.Keen', function(done) {
+      analytics.equal(window.Keen.version, '3.4.1');
+      analytics.load(keen, function() {
+        analytics.equal(window.Keen.version, '3.4.1');
         done();
       });
     });
@@ -163,19 +173,19 @@ describe('Keen IO', function() {
 
       it('should pass an id', function() {
         analytics.identify('id');
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { userId: 'id', traits: { id: 'id' } });
       });
 
       it('should pass a traits', function() {
         analytics.identify({ trait: true });
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { traits: { trait: true } });
       });
 
       it('should pass an id and traits', function() {
         analytics.identify('id', { trait: true });
-        var user = keen.client.client.globalProperties().user;
+        var user = keen.client.config.globalProperties().user;
         analytics.deepEqual(user, { userId: 'id', traits: { trait: true, id: 'id' } });
       });
 
@@ -183,7 +193,7 @@ describe('Keen IO', function() {
         it('should add ipAddon if enabled', function() {
           keen.options.ipAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ip_to_geo',
@@ -196,7 +206,7 @@ describe('Keen IO', function() {
         it('should add uaAddon if enabled', function() {
           keen.options.uaAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ua_parser',
@@ -209,7 +219,7 @@ describe('Keen IO', function() {
         it('should add urlAddon if enabled', function() {
           keen.options.urlAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:url_parser',
@@ -222,7 +232,7 @@ describe('Keen IO', function() {
         it('should add referrerAddon if enabled', function() {
           keen.options.referrerAddon = true;
           analytics.identify('id');
-          var props = keen.client.client.globalProperties();
+          var props = keen.client.config.globalProperties();
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:referrer_parser',
