@@ -16,8 +16,6 @@ describe('Keen IO', function() {
   var readKey = 'e5cdee9b7395b315bd8cc635f3b04fc07561d4e42889fe1b6ac719a9a4b45732c746666d83ce8644c8b0f06b867166654f900b67b250adbc225befac4b3a2562729c2ebebfbf19b1d13f631c2ed0c9f8de0be7897eded88102abe4366c7906011dd480631ed9ba60cdef84f908abc852';
 
   beforeEach(function() {
-    // Test with previous version installed
-    window.Keen = { version: '3.4.1' };
     analytics = new Analytics();
     keen = new KeenLib(options);
     analytics.use(KeenLib);
@@ -92,9 +90,17 @@ describe('Keen IO', function() {
     });
 
     it('should preserve existing window.Keen', function(done) {
-      analytics.equal(window.Keen.version, '3.4.1');
+      window.Keen = { version: '3.4.1' };
       analytics.load(keen, function() {
         analytics.equal(window.Keen.version, '3.4.1');
+        done();
+      });
+    });
+
+    it('should expose window.Keen (v3.1.0) when no previous version is available', function(done) {
+      window.Keen = undefined;
+      analytics.load(keen, function() {
+        analytics.equal(window.Keen.version, '3.1.0');
         done();
       });
     });
