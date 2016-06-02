@@ -1,8 +1,9 @@
+'use strict';
 
-var Analytics = require('analytics.js-core').constructor;
-var integration = require('analytics.js-integration');
-var sandbox = require('clear-env');
-var tester = require('analytics.js-integration-tester');
+var Analytics = require('@segment/analytics.js-core').constructor;
+var integration = require('@segment/analytics.js-integration');
+var sandbox = require('@segment/clear-env');
+var tester = require('@segment/analytics.js-integration-tester');
 var Keen = require('../lib/');
 
 describe('Keen IO', function() {
@@ -141,7 +142,7 @@ describe('Keen IO', function() {
         analytics.called(keen.client.addEvent, 'Viewed category name Page', {
           prop: true,
           path: location.pathname,
-          referrer: '',
+          referrer: document.referrer,
           title: document.title,
           search: location.search,
           name: 'name',
