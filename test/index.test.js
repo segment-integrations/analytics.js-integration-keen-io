@@ -142,7 +142,7 @@ describe('Keen IO', function() {
         analytics.called(keen.client.addEvent, 'Viewed category name Page', {
           prop: true,
           path: location.pathname,
-          referrer: '',
+          referrer: document.referrer,
           title: document.title,
           search: location.search,
           name: 'name',
