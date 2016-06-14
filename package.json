@@ -23,12 +23,12 @@
   },
   "homepage": "https://github.com/segment-integrations/analytics.js-integration-keen-io#readme",
   "dependencies": {
-    "@segment/analytics.js-integration": "^2.0.1"
+    "@segment/analytics.js-integration": "^2.1.0"
   },
   "devDependencies": {
     "@segment/analytics.js-core": "^3.0.0",
     "@segment/analytics.js-integration-tester": "^2.0.0",
-    "@segment/clear-env": "^1.0.0",
+    "@segment/clear-env": "^2.0.0",
     "@segment/eslint-config": "^3.1.1",
     "browserify": "^13.0.0",
     "browserify-istanbul": "^2.0.0",
