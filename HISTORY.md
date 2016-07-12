@@ -1,6 +1,9 @@
-2.0.1 / 2016-05-23
+2.1.0 / 2016-07-12
 ==================
 
+  * Update Karma to 1.1.0
+  * Add test to ensure correct Keen
+  * Prevent namespace collisions 
   * Update keen-js to v3.1.0 (latest possible without breaking changes)
   * Create a new `KeenSegment` namespace for analytics.js-installed SDK and return existing `Keen` object if overwritten
 
