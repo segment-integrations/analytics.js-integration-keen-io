@@ -195,6 +195,13 @@ describe('Keen IO', function() {
         analytics.deepEqual(user, { userId: 'id', traits: { trait: true, id: 'id' } });
       });
 
+      it('should not have modified traits after addEvent', function() {
+        analytics.identify('id', { trait: true });
+        analytics.track('event', { other_trait: true });
+        
+        analytics.equal(typeof keen.client.config.globalProperties().user.traits.other_trait, 'undefined');
+      });
+
       describe('addons', function() {
         it('should add ipAddon if enabled', function() {
           keen.options.ipAddon = true;
