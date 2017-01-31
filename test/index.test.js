@@ -97,10 +97,10 @@ describe('Keen IO', function() {
       });
     });
 
-    it('should expose window.Keen (v3.1.0) when no previous version is available', function(done) {
+    it('should expose window.Keen (v3.4.0) when no previous version is available', function(done) {
       window.Keen = undefined;
       analytics.load(keen, function() {
-        analytics.equal(window.Keen.version, '3.1.0');
+        analytics.equal(window.Keen.version, '3.4.0');
         done();
       });
     });
