@@ -76,7 +76,7 @@ describe('Keen IO', function() {
 
     it('should load slim version by default', function(done) {
       analytics.load(keen, function() {
-        analytics.assert(!window.KeenSegment.Visualization);
+        analytics.assert(!window.KeenSegment.Dataviz);
         done();
       });
     });
@@ -84,7 +84,7 @@ describe('Keen IO', function() {
     it('should load full version if you have a `readKey`', function(done) {
       keen.options.readKey = readKey;
       analytics.load(keen, function() {
-        analytics.assert(window.KeenSegment.Visualization);
+        analytics.assert(window.KeenSegment.Dataviz);
         done();
       });
     });
