@@ -76,7 +76,7 @@ describe('Keen IO', function() {
 
     it('should load slim version by default', function(done) {
       analytics.load(keen, function() {
-        analytics.assert(!window.KeenSegment.Visualization);
+        analytics.assert(!window.KeenSegment.Dataviz);
         done();
       });
     });
@@ -84,7 +84,7 @@ describe('Keen IO', function() {
     it('should load full version if you have a `readKey`', function(done) {
       keen.options.readKey = readKey;
       analytics.load(keen, function() {
-        analytics.assert(window.KeenSegment.Visualization);
+        analytics.assert(window.KeenSegment.Dataviz);
         done();
       });
     });
@@ -97,10 +97,10 @@ describe('Keen IO', function() {
       });
     });
 
-    it('should expose window.Keen (v3.1.0) when no previous version is available', function(done) {
+    it('should expose window.Keen (v3.4.0) when no previous version is available', function(done) {
       window.Keen = undefined;
       analytics.load(keen, function() {
-        analytics.equal(window.Keen.version, '3.1.0');
+        analytics.equal(window.Keen.version, '3.4.0');
         done();
       });
     });
