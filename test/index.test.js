@@ -33,40 +33,20 @@ describe('Keen IO', function() {
   it('should have the right settings', function() {
     analytics.compare(KeenLib, integration('Keen IO')
       .global('KeenSegment')
-      .option('ipAddon', false)
       .option('projectId', '')
       .option('readKey', '')
+      .option('writeKey', '')
+
+      .option('ipAddon', false)
       .option('referrerAddon', false)
-      .option('trackAllPages', false)
-      .option('trackNamedPages', true)
       .option('uaAddon', false)
       .option('urlAddon', false)
-      .option('writeKey', ''));
-  });
+      .option('datetimeAddon', false)
 
-  describe('before loading', function() {
-    beforeEach(function() {
-      analytics.stub(keen, 'load');
-    });
-
-    describe('#initialize', function() {
-      it('should create window.KeenSegment', function() {
-        analytics.assert(!window.KeenSegment);
-        analytics.initialize();
-        analytics.page();
-        analytics.assert(window.KeenSegment);
-      });
-
-      it('should configure KeenSegment', function() {
-        analytics.initialize();
-        analytics.page();
-        analytics.deepEqual(keen.client._config, {
-          projectId: options.projectId,
-          writeKey: options.writeKey,
-          readKey: ''
-        });
-      });
-    });
+      .option('trackAllPages', false)
+      .option('trackCategorizedPages', true)
+      .option('trackNamedPages', true)
+      );
   });
 
   describe('loading', function() {
@@ -97,10 +77,10 @@ describe('Keen IO', function() {
       });
     });
 
-    it('should expose window.Keen (v3.4.0) when no previous version is available', function(done) {
+    it('should expose window.Keen (v5.0.1) when no previous version is available', function(done) {
       window.Keen = undefined;
       analytics.load(keen, function() {
-        analytics.equal(window.Keen.version, '3.4.0');
+        analytics.assert(window.Keen.version);
         done();
       });
     });
@@ -115,33 +95,33 @@ describe('Keen IO', function() {
 
     describe('#page', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should not track anonymous pages by default', function() {
         analytics.page();
-        analytics.didNotCall(keen.client.addEvent);
+        analytics.didNotCall(keen.client.recordEvent);
       });
 
       it('should track anonymous pages when the option is on', function() {
         keen.options.trackAllPages = true;
         analytics.page();
-        analytics.called(keen.client.addEvent, 'Loaded a Page');
+        analytics.called(keen.client.recordEvent, 'Loaded a Page');
       });
 
       it('should track named pages by default', function() {
         analytics.page('Name');
-        analytics.called(keen.client.addEvent, 'Viewed Name Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Name Page');
       });
 
       it('should track named pages with categories', function() {
         analytics.page('Category', 'Name');
-        analytics.called(keen.client.addEvent, 'Viewed Category Name Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Category Name Page');
       });
 
       it('should track categorized pages by default', function() {
         analytics.page('Category', 'Name');
-        analytics.called(keen.client.addEvent, 'Viewed Category Page');
+        analytics.called(keen.client.recordEvent, 'Viewed Category Page');
       });
 
       it('should not track a named or categorized page when the option is off', function() {
@@ -149,195 +129,210 @@ describe('Keen IO', function() {
         keen.options.trackCategorizedPages = false;
         analytics.page('Name');
         analytics.page('Category', 'Name');
-        analytics.didNotCall(keen.client.addEvent);
+        analytics.didNotCall(keen.client.recordEvent);
       });
 
-      it('should pass properties to .addEvent', function() {
+      it('should pass properties to .recordEvent', function() {
         var time = new Date();
         analytics.page('category', 'name', { prop: true }, { timestamp: time });
-        analytics.called(keen.client.addEvent, 'Viewed category name Page', {
+        analytics.called(keen.client.recordEvent, 'Viewed category name Page');
+        var props = keen.client.recordEvent.args[0][1];
+        analytics.deepEqual(props.toString(), {
           prop: true,
-          path: location.pathname,
-          referrer: document.referrer,
-          title: document.title,
-          search: location.search,
           name: 'name',
           category: 'category',
+          path: location.pathname,
+          referrer: document.referrer,
+          search: location.search,
+          title: document.title,
           url: location.href,
           keen: {
             timestamp: time,
             addons: []
           }
-        });
+        }.toString());
       });
     });
 
     describe('#identify', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should pass an id', function() {
         analytics.identify('id');
-        var user = keen.client.config.globalProperties().user;
+        var user = keen.client.extendEvents().user;
         analytics.deepEqual(user, { userId: 'id', traits: { id: 'id' } });
       });
 
       it('should pass a traits', function() {
         analytics.identify({ trait: true });
-        var user = keen.client.config.globalProperties().user;
+        var user = keen.client.extendEvents().user;
         analytics.deepEqual(user, { traits: { trait: true } });
       });
 
       it('should pass an id and traits', function() {
         analytics.identify('id', { trait: true });
-        var user = keen.client.config.globalProperties().user;
+        var user = keen.client.extendEvents().user;
         analytics.deepEqual(user, { userId: 'id', traits: { trait: true, id: 'id' } });
       });
 
-      it('should not have modified traits after addEvent', function() {
+      it('should not have modified traits after recordEvent', function() {
         analytics.identify('id', { trait: true });
         analytics.track('event', { other_trait: true });
-        
-        analytics.equal(typeof keen.client.config.globalProperties().user.traits.other_trait, 'undefined');
-      });
 
-      describe('addons', function() {
-        it('should add ipAddon if enabled', function() {
-          keen.options.ipAddon = true;
-          analytics.identify('id');
-          var props = keen.client.config.globalProperties();
-          var addon = props.keen.addons[0];
-          analytics.deepEqual(addon, {
-            name: 'keen:ip_to_geo',
-            input: { ip: 'ip_address' },
-            output: 'ip_geo_info'
-          });
-          analytics.equal(props.ip_address, '${keen.ip}');
-        });
-
-        it('should add uaAddon if enabled', function() {
-          keen.options.uaAddon = true;
-          analytics.identify('id');
-          var props = keen.client.config.globalProperties();
-          var addon = props.keen.addons[0];
-          analytics.deepEqual(addon, {
-            name: 'keen:ua_parser',
-            input: { ua_string: 'user_agent' },
-            output: 'parsed_user_agent'
-          });
-          analytics.equal(props.user_agent, '${keen.user_agent}');
-        });
-
-        it('should add urlAddon if enabled', function() {
-          keen.options.urlAddon = true;
-          analytics.identify('id');
-          var props = keen.client.config.globalProperties();
-          var addon = props.keen.addons[0];
-          analytics.deepEqual(addon, {
-            name: 'keen:url_parser',
-            input: { url: 'page_url' },
-            output: 'parsed_page_url'
-          });
-          analytics.equal(props.page_url, document.location.href);
-        });
-
-        it('should add referrerAddon if enabled', function() {
-          keen.options.referrerAddon = true;
-          analytics.identify('id');
-          var props = keen.client.config.globalProperties();
-          var addon = props.keen.addons[0];
-          analytics.deepEqual(addon, {
-            name: 'keen:referrer_parser',
-            input: {
-              referrer_url: 'referrer_url',
-              page_url: 'page_url'
-            },
-            output: 'referrer_info'
-          });
-          analytics.equal(props.referrer_url, document.referrer);
-          analytics.equal(props.page_url, document.location.href);
-        });
+        analytics.equal(typeof keen.client.extendEvents().user.traits.other_trait, 'undefined');
       });
     });
 
+    describe('addons', function() {
+      it('should add ipAddon if enabled', function() {
+        keen.options.ipAddon = true;
+        analytics.identify('id');
+        var props = keen.client.extendEvents();
+        var addon = props.keen.addons[0];
+        analytics.deepEqual(addon, {
+          name: 'keen:ip_to_geo',
+          input: {
+            ip: 'geo.ip_address'
+          },
+          output : 'geo.info'
+        });
+        analytics.equal(props.geo.ip_address, '${keen.ip}');
+      });
+
+      it('should add uaAddon if enabled', function() {
+        keen.options.uaAddon = true;
+        analytics.identify('id');
+        var props = keen.client.extendEvents();
+        var addon = props.keen.addons[0];
+        analytics.deepEqual(addon, {
+          name: 'keen:ua_parser',
+          input: {
+            ua_string: 'tech.user_agent'
+          },
+          output: 'tech.info'
+        });
+        analytics.equal(props.tech.user_agent, '${keen.user_agent}');
+      });
+
+      it('should add urlAddon if enabled', function() {
+        keen.options.urlAddon = true;
+        analytics.identify('id');
+        var props = keen.client.extendEvents();
+        var addon = props.keen.addons[0];
+        analytics.deepEqual(addon, {
+          name: 'keen:url_parser',
+          input: {
+            url: 'page.url'
+          },
+          output: 'page.info'
+        });
+        analytics.equal(props.page.url, document.location.href);
+      });
+
+      it('should add referrerAddon if enabled', function() {
+        keen.options.referrerAddon = true;
+        analytics.identify('id');
+        var props = keen.client.extendEvents();
+        var addon = props.keen.addons[0];
+        analytics.deepEqual(addon, {
+          name: 'keen:referrer_parser',
+          input: {
+            referrer_url: 'referrer.url',
+            page_url: 'page.url'
+          },
+          output: 'referrer.info'
+        });
+        analytics.equal(props.referrer.url, document.referrer);
+      });
+    });
+
+
     describe('#track', function() {
       beforeEach(function() {
-        analytics.stub(keen.client, 'addEvent');
+        analytics.stub(keen.client, 'recordEvent');
       });
 
       it('should pass an event', function() {
         analytics.track('event');
-        analytics.called(keen.client.addEvent, 'event');
+        analytics.called(keen.client.recordEvent, 'event');
       });
 
       it('should pass an event and properties', function() {
         var time = new Date();
         analytics.track('event', { property: true }, { timestamp: time });
-        analytics.called(keen.client.addEvent, 'event', {
+        analytics.called(keen.client.recordEvent, 'event');
+        var props = keen.client.recordEvent.args[0][1];
+        analytics.deepEqual(props.toString(), {
           property: true,
           keen: {
             timestamp: time,
             addons: []
           }
-        });
+        }.toString());
       });
 
       describe('addons', function() {
         it('should add ipAddon if enabled', function() {
           keen.options.ipAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ip_to_geo',
-            input: { ip: 'ip_address' },
-            output: 'ip_geo_info'
+            input: {
+              ip: 'geo.ip_address'
+            },
+            output : 'geo.info'
           });
-          analytics.equal(props.ip_address, '${keen.ip}');
+          analytics.equal(props.geo.ip_address, '${keen.ip}');
         });
 
         it('should add uaAddon if enabled', function() {
           keen.options.uaAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:ua_parser',
-            input: { ua_string: 'user_agent' },
-            output: 'parsed_user_agent'
+            input: {
+              ua_string: 'tech.user_agent'
+            },
+            output: 'tech.info'
           });
-          analytics.equal(props.user_agent, '${keen.user_agent}');
+          analytics.equal(props.tech.user_agent, '${keen.user_agent}');
         });
 
         it('should add urlAddon if enabled', function() {
           keen.options.urlAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:url_parser',
-            input: { url: 'page_url' },
-            output: 'parsed_page_url'
+            input: {
+              url: 'page.url'
+            },
+            output: 'page.info'
           });
-          analytics.equal(props.page_url, document.location.href);
+          analytics.equal(props.page.url, document.location.href);
         });
 
         it('should add referrerAddon if enabled', function() {
           keen.options.referrerAddon = true;
           analytics.track('event');
-          var props = keen.client.addEvent.args[0][1];
+          var props = keen.client.recordEvent.args[0][1];
           var addon = props.keen.addons[0];
           analytics.deepEqual(addon, {
             name: 'keen:referrer_parser',
             input: {
-              referrer_url: 'referrer_url',
-              page_url: 'page_url'
+              referrer_url: 'referrer.url',
+              page_url: 'page.url'
             },
-            output: 'referrer_info'
+            output: 'referrer.info'
           });
-          analytics.equal(props.referrer_url, document.referrer);
-          analytics.equal(props.page_url, document.location.href);
+          analytics.equal(props.referrer.url, document.referrer);
         });
       });
     });
